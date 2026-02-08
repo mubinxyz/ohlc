@@ -3,7 +3,6 @@
 from .get_and_clean_data import get_and_clean_data
 from .plot_candlestick import plot_candlestick
 
-# from numpy.testing._private.utils import assert_allclose
 import pandas as pd
 import numpy as np
 import matplotlib
@@ -12,8 +11,7 @@ matplotlib.use('Agg')
 from matplotlib.transforms import blended_transform_factory
 
 
-
-
+# FIX #3: Add ohlc_tz to DEFAULT_CONFIG (will be set dynamically in views.py)
 DEFAULT_CONFIG = {
     # === plot_candlestick ===
     "up_color": "#fbc02d",
@@ -47,19 +45,16 @@ DEFAULT_CONFIG = {
     "show_right_spine": False,
     # Layout
     "y_padding": 0.05,
-
     "show_legend": False,
     "right_margin": 8,
+    # FIX #3: Add timezone to config (will be set dynamically)
+    "ohlc_tz": "utc+3:30",  # Default value
 }
-
-
 
 
 def download_csv():
     # code yourself
     pass
-
-
 
 
 def plot_strategy(
@@ -73,6 +68,7 @@ def plot_strategy(
     output_candles=None,
     tf=None,
     asset=None,
+    ohlc_tz=None,  # FIX #3: Add timezone parameter
 ):
     def _calculate_figsize():
         """
@@ -86,15 +82,12 @@ def plot_strategy(
             # Use manual figsize from config
             return figsize
 
-
         # Calculate width based on actual data length
         num_candles = len(df) if df is not None else output_candles
         width = num_candles * width_per_candle
         width = max(min_width, min(max_width, width))
 
         return (width, height)
-
-
 
     # plotting functions
     def _plot_last_price_line(ax, df, asset):
@@ -149,7 +142,6 @@ def plot_strategy(
             clip_on=False
         )
 
-
     def _plot_last_datetime_info(ax, df, asset):
         """TradingView-style datetime box under the last candle"""
         if df is None or df.empty:
@@ -185,7 +177,6 @@ def plot_strategy(
             zorder=10
         )
 
-
     # === MAIN PLOTTING LOGIC ===
 
     # Calculate optimal figsize
@@ -198,15 +189,17 @@ def plot_strategy(
         rows, cols,
         figsize=figsize,  # Use calculated figsize
         facecolor=DEFAULT_CONFIG['bg_color'],
-        # gridspec_kw={'height_ratios': [7, 1]},
     )
 
+    # FIX #3: Use passed timezone or fallback to config
+    timezone_to_use = ohlc_tz if ohlc_tz is not None else DEFAULT_CONFIG["ohlc_tz"]
+
     plot_candlestick(
-        ax=axes[0],
+        ax=axes,  # FIX: Single axis, not axes[0]
         df=df,
         tf=tf,
         ticker=asset,
-        timezone=DEFAULT_CONFIG["ohlc_tz"],
+        timezone=timezone_to_use,
         up_color=DEFAULT_CONFIG["up_color"],
         down_color=DEFAULT_CONFIG["down_color"],
         edge_color=DEFAULT_CONFIG["edge_color"],
@@ -235,13 +228,13 @@ def plot_strategy(
         y_padding=DEFAULT_CONFIG["y_padding"]
     )
 
-    xlim = axes[0].get_xlim()
+    xlim = axes.get_xlim()
     right_margin = DEFAULT_CONFIG['right_margin']
-    axes[0].set_xlim(xlim[0], xlim[1] + right_margin)
+    axes.set_xlim(xlim[0], xlim[1] + right_margin)
 
     # Add all overlay elements
-    _plot_last_price_line(axes[0], df, asset)
-    _plot_last_datetime_info(axes[0], df, asset)
+    _plot_last_price_line(axes, df, asset)
+    _plot_last_datetime_info(axes, df, asset)
 
     plt.tight_layout()
     return fig

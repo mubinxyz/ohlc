@@ -1,0 +1,5 @@
+\__pycache__
+.env
+\testing
+db.sqlite3
+\migrations

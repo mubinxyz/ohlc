@@ -92,24 +92,24 @@ def get_and_clean_data(
 
 
     # Determine date range
-    if date_range and from_date:
+    if date_range and from_date_str:
         # Use specified date range
         from_date = _parse_date_to_unix(
-            from_date=from_date_str, 
-            ohlc_tz=ohlc_tz_str,
+            date_str=from_date_str, 
+            timezone_str=ohlc_tz_str,
         )
 
-        if to_date:
+        if to_date_str:
             to_date = _parse_date_to_unix(
-                to_date=to_date_str,
-                ohlc_tz=ohlc_tz_str,
+                date_str=to_date_str,
+                timezone_str=ohlc_tz_str,
             )
         else:
             # Default to current time if to_date not specified
             to_date = int(time.time())
 
         print(f"[get_and_clean_data] Using date range mode:")
-        print(f"  From: {from_date_str} (Unix: {to_date})")
+        print(f"  From: {from_date_str} (Unix: {from_date})")
         print(f"  To: {to_date_str if to_date_str else 'now'} (Unix: {to_date})")
 
     else:
@@ -203,3 +203,6 @@ def get_and_clean_data(
     print(f"[get_and_clean_data] Loaded {len(df)} candles")
     if not df.empty:
         print(f"  Date range: {df.index[0]} to {df.index[-1]}")
+    
+    # CRITICAL: Return the dataframe!
+    return df

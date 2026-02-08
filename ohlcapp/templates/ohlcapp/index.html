@@ -124,6 +124,16 @@
             border-color: #667eea;
         }
 
+        /* FIX: Style for disabled inputs */
+        input[type="text"]:disabled,
+        input[type="number"]:disabled,
+        select:disabled {
+            background-color: #f5f5f5;
+            color: #999;
+            cursor: not-allowed;
+            border-color: #ddd;
+        }
+
         input[type="file"] {
             width: 100%;
             padding: 12px;
@@ -221,26 +231,27 @@
         }
 
         .message {
+            display: none;
             padding: 15px;
             border-radius: 8px;
-            margin-top: 15px;
-            display: none;
+            margin-top: 20px;
+            font-weight: 500;
+        }
+
+        .message.active {
+            display: block;
         }
 
         .message.success {
-            background: #d4edda;
+            background-color: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
 
         .message.error {
-            background: #f8d7da;
+            background-color: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
-        }
-
-        .message.active {
-            display: block;
         }
 
         .help-text {
@@ -249,36 +260,38 @@
             margin-top: 5px;
         }
 
-        .radio-group {
+        .mode-selector {
             display: flex;
-            gap: 20px;
-            margin-bottom: 15px;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
         }
 
-        .radio-option {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .mode-option {
+            flex: 1;
         }
 
-        .radio-option input[type="radio"] {
-            width: 18px;
-            height: 18px;
+        .mode-option input[type="radio"] {
+            margin-right: 8px;
+        }
+
+        .mode-option label {
             cursor: pointer;
+            margin-bottom: 0;
         }
 
-        @media (max-width: 768px) {
-            .grid-2 {
-                grid-template-columns: 1fr;
-            }
+        /* FIX: Add visual indicator for disabled fields */
+        .form-group.disabled {
+            opacity: 0.6;
+        }
 
-            h1 {
-                font-size: 2em;
-            }
-
-            .tabs {
-                flex-direction: column;
-            }
+        .form-group.disabled label::after {
+            content: " (disabled in date range mode)";
+            font-size: 0.85em;
+            color: #999;
+            font-weight: normal;
         }
     </style>
 </head>
@@ -286,48 +299,56 @@
     <div class="container">
         <header>
             <h1>📊 OHLC Data Tool</h1>
-            <p class="subtitle">Download CSV data and visualize candlestick charts</p>
+            <p class="subtitle">Download CSV data or generate beautiful candlestick charts</p>
         </header>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('csv')">Download CSV</button>
-            <button class="tab" onclick="switchTab('visualizer')">Chart Visualizer</button>
+            <button class="tab active" onclick="switchTab('csv')">📥 Download CSV</button>
+            <button class="tab" onclick="switchTab('visualizer')">📈 Chart Visualizer</button>
         </div>
 
         <!-- CSV Download Tab -->
         <div id="csv-tab" class="tab-content active">
             <div class="card">
-                <h2>Download OHLC Data as CSV</h2>
+                <h2>Download OHLC CSV Data</h2>
                 <form id="csv-form">
                     <div class="grid-2">
                         <div class="form-group">
                             <label for="csv-asset">Asset Symbol</label>
                             <input type="text" id="csv-asset" name="asset" value="eurusd" required>
-                            <p class="help-text">e.g., btcusd, ethusd, eurusd, xauusd</p>
+                            <p class="help-text">e.g., btcusd, eurusd, xauusd</p>
                         </div>
 
                         <div class="form-group">
                             <label for="csv-tf">Timeframe (minutes)</label>
                             <select id="csv-tf" name="tf">
                                 <option value="1">1 minute</option>
+                                <option value="2">2 minute</option>
+                                <option value="3">3 minute</option>
                                 <option value="5">5 minutes</option>
+                                <option value="10">10 minutes</option>
                                 <option value="15" selected>15 minutes</option>
                                 <option value="30">30 minutes</option>
                                 <option value="60">1 hour</option>
+                                <option value="120">2 hour</option>
                                 <option value="240">4 hours</option>
+                                <option value="360">6 hours</option>
                                 <option value="1440">Daily</option>
                             </select>
                         </div>
+                    </div>
 
-                        <div class="form-group">
+                    <div class="grid-2">
+                        <div class="form-group" id="csv-candles-group">
                             <label for="csv-candles">Number of Candles</label>
-                            <input type="number" id="csv-candles" name="output_candles" value="85" min="1" max="10000" required>
+                            <input type="number" id="csv-candles" name="output_candles" value="85" min="1" max="10000">
+                            <p class="help-text">Maximum candles to download</p>
                         </div>
 
                         <div class="form-group">
                             <label for="csv-tz">Timezone</label>
                             <input type="text" id="csv-tz" name="ohlc_tz" value="utc+3:30">
-                            <p class="help-text">e.g., utc+3:30, utc-5, utc</p>
+                            <p class="help-text">e.g., utc+3:30, utc-5:00</p>
                         </div>
                     </div>
 
@@ -343,10 +364,12 @@
                             <div class="form-group">
                                 <label for="csv-from-date">From Date</label>
                                 <input type="text" id="csv-from-date" name="from_date" placeholder="2024-01-01 00:00:00">
+                                <p class="help-text">Format: YYYY-MM-DD HH:MM:SS</p>
                             </div>
                             <div class="form-group">
                                 <label for="csv-to-date">To Date (optional)</label>
                                 <input type="text" id="csv-to-date" name="to_date" placeholder="2024-12-31 23:59:59">
+                                <p class="help-text">Leave empty for current time</p>
                             </div>
                         </div>
                     </div>
@@ -356,7 +379,7 @@
 
                 <div id="csv-loading" class="loading">
                     <div class="spinner"></div>
-                    <p>Fetching data...</p>
+                    <p>Downloading data...</p>
                 </div>
 
                 <div id="csv-message" class="message"></div>
@@ -366,19 +389,16 @@
         <!-- Visualizer Tab -->
         <div id="visualizer-tab" class="tab-content">
             <div class="card">
-                <h2>Generate Candlestick Chart</h2>
+                <h2>Generate Chart PDF</h2>
                 <form id="visualizer-form">
-                    <div class="form-group">
-                        <label>Data Source</label>
-                        <div class="radio-group">
-                            <div class="radio-option">
-                                <input type="radio" id="mode-direct" name="mode" value="direct" checked>
-                                <label for="mode-direct" style="margin-bottom: 0;">Fetch Directly</label>
-                            </div>
-                            <div class="radio-option">
-                                <input type="radio" id="mode-csv" name="mode" value="csv">
-                                <label for="mode-csv" style="margin-bottom: 0;">Upload CSV</label>
-                            </div>
+                    <div class="mode-selector">
+                        <div class="mode-option">
+                            <input type="radio" id="mode-direct" name="mode" value="direct" checked>
+                            <label for="mode-direct">📊 Direct Mode (Fetch Data)</label>
+                        </div>
+                        <div class="mode-option">
+                            <input type="radio" id="mode-csv" name="mode" value="csv">
+                            <label for="mode-csv">📁 CSV Upload Mode</label>
                         </div>
                     </div>
 
@@ -386,31 +406,44 @@
                         <div class="form-group">
                             <label for="csv-file">Upload CSV File</label>
                             <input type="file" id="csv-file" name="csv_file" accept=".csv">
+                            <p class="help-text">CSV must have columns: open, high, low, close (and optionally volume)</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="csv-chart-name">Chart Name (optional)</label>
+                            <input type="text" id="csv-chart-name" name="chart_name" placeholder="e.g., My Chart">
+                            <p class="help-text">Name to display in the chart title</p>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="viz-assets">Asset Symbols (space-separated for multiple)</label>
-                        <input type="text" id="viz-assets" name="assets" value="eurusd" required>
-                        <p class="help-text">e.g., btcusd ethusd xrpusd (multiple assets will be stacked)</p>
+                    <div id="direct-mode-section">
+                        <div class="form-group">
+                            <label for="viz-assets">Asset Symbols (space-separated for multiple)</label>
+                            <input type="text" id="viz-assets" name="assets" value="eurusd" required>
+                            <p class="help-text">e.g., btcusd ethusd xrpusd (multiple assets will be stacked)</p>
+                        </div>
                     </div>
 
-                    <div id="direct-mode-fields">
+                    <div id="direct-mode-fields" style="display: block;">
                         <div class="grid-2">
                             <div class="form-group">
                                 <label for="viz-tf">Timeframe (minutes)</label>
                                 <select id="viz-tf" name="tf">
                                     <option value="1">1 minute</option>
+                                    <option value="2">2 minute</option>
+                                    <option value="3">3 minute</option>
                                     <option value="5">5 minutes</option>
+                                    <option value="10">10 minutes</option>
                                     <option value="15" selected>15 minutes</option>
                                     <option value="30">30 minutes</option>
                                     <option value="60">1 hour</option>
+                                    <option value="120">2 hour</option>
                                     <option value="240">4 hours</option>
+                                    <option value="360">6 hours</option>
                                     <option value="1440">Daily</option>
                                 </select>
                             </div>
 
-                            <div class="form-group">
+                            <div class="form-group" id="viz-candles-group">
                                 <label for="viz-candles">Number of Candles</label>
                                 <input type="number" id="viz-candles" name="output_candles" value="85" min="1" max="10000">
                             </div>
@@ -442,28 +475,6 @@
                         </div>
                     </div>
 
-                    <div id="csv-mode-fields" style="display: none;">
-                        <div class="grid-2">
-                            <div class="form-group">
-                                <label for="viz-tf-csv">Timeframe (for title)</label>
-                                <select id="viz-tf-csv" name="tf">
-                                    <option value="1">1 minute</option>
-                                    <option value="5">5 minutes</option>
-                                    <option value="15" selected>15 minutes</option>
-                                    <option value="30">30 minutes</option>
-                                    <option value="60">1 hour</option>
-                                    <option value="240">4 hours</option>
-                                    <option value="1440">Daily</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="viz-tz-csv">Timezone (for title)</label>
-                                <input type="text" id="viz-tz-csv" name="ohlc_tz" value="utc+3:30">
-                            </div>
-                        </div>
-                    </div>
-
                     <button type="submit">📊 Generate Chart PDF</button>
                 </form>
 
@@ -487,14 +498,34 @@
             document.getElementById(tab + '-tab').classList.add('active');
         }
 
-        // CSV date range toggle
+        // FIX #1: CSV date range toggle with output_candles disable
         document.getElementById('csv-date-range').addEventListener('change', function() {
-            document.getElementById('csv-date-range-fields').classList.toggle('active', this.checked);
+            const isChecked = this.checked;
+            const dateRangeFields = document.getElementById('csv-date-range-fields');
+            const candlesInput = document.getElementById('csv-candles');
+            const candlesGroup = document.getElementById('csv-candles-group');
+            
+            // Toggle date range fields
+            dateRangeFields.classList.toggle('active', isChecked);
+            
+            // Disable/enable output_candles
+            candlesInput.disabled = isChecked;
+            candlesGroup.classList.toggle('disabled', isChecked);
         });
 
-        // Visualizer date range toggle
+        // FIX #1: Visualizer date range toggle with output_candles disable
         document.getElementById('viz-date-range').addEventListener('change', function() {
-            document.getElementById('viz-date-range-fields').classList.toggle('active', this.checked);
+            const isChecked = this.checked;
+            const dateRangeFields = document.getElementById('viz-date-range-fields');
+            const candlesInput = document.getElementById('viz-candles');
+            const candlesGroup = document.getElementById('viz-candles-group');
+            
+            // Toggle date range fields
+            dateRangeFields.classList.toggle('active', isChecked);
+            
+            // Disable/enable output_candles
+            candlesInput.disabled = isChecked;
+            candlesGroup.classList.toggle('disabled', isChecked);
         });
 
         // Mode toggle for visualizer
@@ -502,8 +533,8 @@
             radio.addEventListener('change', function() {
                 const isCSV = this.value === 'csv';
                 document.getElementById('csv-upload-section').style.display = isCSV ? 'block' : 'none';
+                document.getElementById('direct-mode-section').style.display = isCSV ? 'none' : 'block';
                 document.getElementById('direct-mode-fields').style.display = isCSV ? 'none' : 'block';
-                document.getElementById('csv-mode-fields').style.display = isCSV ? 'block' : 'none';
             });
         });
 
