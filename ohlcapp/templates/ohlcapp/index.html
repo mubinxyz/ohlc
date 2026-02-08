@@ -354,7 +354,7 @@
 
                     <div class="form-group">
                         <div class="checkbox-group">
-                            <input type="checkbox" id="csv-date-range" name="date_range">
+                            <input type="checkbox" id="csv-date-range" name="date_range" value="true">
                             <label for="csv-date-range" style="margin-bottom: 0;">Use specific date range</label>
                         </div>
                     </div>
@@ -363,12 +363,12 @@
                         <div class="grid-2">
                             <div class="form-group">
                                 <label for="csv-from-date">From Date</label>
-                                <input type="text" id="csv-from-date" name="from_date" placeholder="2024-01-01 00:00:00">
-                                <p class="help-text">Format: YYYY-MM-DD HH:MM:SS</p>
+                                <input type="text" id="csv-from-date" name="from_date" placeholder="2024-01-01 or 2024/01/01 14:30">
+                                <p class="help-text">Format: YYYY-MM-DD [HH:MM[:SS]] or YYYY/MM/DD [HH:MM[:SS]]</p>
                             </div>
                             <div class="form-group">
                                 <label for="csv-to-date">To Date (optional)</label>
-                                <input type="text" id="csv-to-date" name="to_date" placeholder="2024-12-31 23:59:59">
+                                <input type="text" id="csv-to-date" name="to_date" placeholder="2024-12-31 or 2024/12/31 23:59">
                                 <p class="help-text">Leave empty for current time</p>
                             </div>
                         </div>
@@ -456,7 +456,7 @@
 
                         <div class="form-group">
                             <div class="checkbox-group">
-                                <input type="checkbox" id="viz-date-range" name="date_range">
+                                <input type="checkbox" id="viz-date-range" name="date_range" value="true">
                                 <label for="viz-date-range" style="margin-bottom: 0;">Use specific date range</label>
                             </div>
                         </div>
@@ -465,11 +465,11 @@
                             <div class="grid-2">
                                 <div class="form-group">
                                     <label for="viz-from-date">From Date</label>
-                                    <input type="text" id="viz-from-date" name="from_date" placeholder="2024-01-01 00:00:00">
+                                    <input type="text" id="viz-from-date" name="from_date" placeholder="2024-01-01 or 2024/01/01 14:30">
                                 </div>
                                 <div class="form-group">
                                     <label for="viz-to-date">To Date (optional)</label>
-                                    <input type="text" id="viz-to-date" name="to_date" placeholder="2024-12-31 23:59:59">
+                                    <input type="text" id="viz-to-date" name="to_date" placeholder="2024-12-31 or 2024/12/31 23:59">
                                 </div>
                             </div>
                         </div>

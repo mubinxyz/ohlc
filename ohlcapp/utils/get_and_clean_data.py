@@ -66,7 +66,12 @@ def get_and_clean_data(
         if parsed_dt is None:
             raise ValueError(
                 f"Unable to parse date string: '{date_str}'. "
-                f"Supported formats: YYYY-MM-DD [HH:MM[:SS]]"
+                f"Supported formats:\n"
+                f"  - YYYY-MM-DD (e.g., 2024-01-15)\n"
+                f"  - YYYY-MM-DD HH:MM (e.g., 2024-01-15 14:30)\n"
+                f"  - YYYY-MM-DD HH:MM:SS (e.g., 2024-01-15 14:30:00)\n"
+                f"  - YYYY/MM/DD formats also accepted\n"
+                f"Note: Month and day must be 01-12 and 01-31, not 00"
             )
 
         # Localize to specified timezone and convert to Unix timestamp

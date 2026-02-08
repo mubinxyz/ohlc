@@ -41,9 +41,25 @@ def download_csv(request):
         asset = request.POST.get('asset', 'eurusd').strip().lower()
         tf = int(request.POST.get('tf', 15))
         ohlc_tz = request.POST.get('ohlc_tz', 'utc+3:30')
-        date_range = request.POST.get('date_range', 'false').lower() == 'true'
+        date_range = request.POST.get('date_range', 'false').lower() in ['true', 'on']
         from_date_str = request.POST.get('from_date', None)
         to_date_str = request.POST.get('to_date', None)
+        
+        # Validate date format if date_range mode is enabled
+        if date_range and from_date_str and from_date_str.strip():
+            from_date_str = from_date_str.strip()
+            # Check for invalid dates like '2024-00-00'
+            if '00-00' in from_date_str or '-00' in from_date_str:
+                return JsonResponse({
+                    'error': f'Invalid date format: "{from_date_str}". Month and day cannot be 00. Use format: YYYY-MM-DD (e.g., 2024-01-01)'
+                }, status=400)
+            
+            if to_date_str and to_date_str.strip():
+                to_date_str = to_date_str.strip()
+                if '00-00' in to_date_str or '-00' in to_date_str:
+                    return JsonResponse({
+                        'error': f'Invalid date format: "{to_date_str}". Month and day cannot be 00. Use format: YYYY-MM-DD (e.g., 2024-12-31)'
+                    }, status=400)
         
         # FIX: Only use output_candles when NOT in date_range mode
         if date_range:
@@ -147,9 +163,25 @@ def visualize_chart(request):
             assets = [a.strip().lower() for a in assets_str.split() if a.strip()]
             tf = int(request.POST.get('tf', 15))
             ohlc_tz = request.POST.get('ohlc_tz', 'utc+3:30')
-            date_range = request.POST.get('date_range', 'false').lower() == 'true'
+            date_range = request.POST.get('date_range', 'false').lower() in ['true', 'on']
             from_date_str = request.POST.get('from_date', None)
             to_date_str = request.POST.get('to_date', None)
+            
+            # Validate date format if date_range mode is enabled
+            if date_range and from_date_str and from_date_str.strip():
+                from_date_str = from_date_str.strip()
+                # Check for invalid dates like '2024-00-00'
+                if '00-00' in from_date_str or '-00' in from_date_str:
+                    return JsonResponse({
+                        'error': f'Invalid date format: "{from_date_str}". Month and day cannot be 00. Use format: YYYY-MM-DD (e.g., 2024-01-01)'
+                    }, status=400)
+                
+                if to_date_str and to_date_str.strip():
+                    to_date_str = to_date_str.strip()
+                    if '00-00' in to_date_str or '-00' in to_date_str:
+                        return JsonResponse({
+                            'error': f'Invalid date format: "{to_date_str}". Month and day cannot be 00. Use format: YYYY-MM-DD (e.g., 2024-12-31)'
+                        }, status=400)
             
             # FIX: Only use output_candles when NOT in date_range mode
             if date_range:
