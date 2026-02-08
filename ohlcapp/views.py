@@ -45,9 +45,9 @@ def download_csv(request):
         from_date_str = request.POST.get('from_date', None)
         to_date_str = request.POST.get('to_date', None)
         
-        # FIX #1: Only use output_candles when NOT in date_range mode
+        # FIX: Only use output_candles when NOT in date_range mode
         if date_range:
-            output_candles = None  # Will be ignored by get_and_clean_data
+            output_candles = 9999  # Large fallback value (will be ignored by get_and_clean_data)
         else:
             output_candles = int(request.POST.get('output_candles', 85))
         
@@ -57,7 +57,7 @@ def download_csv(request):
             from_date_str=from_date_str,
             to_date_str=to_date_str,
             ohlc_tz_str=ohlc_tz,
-            output_candles=output_candles if not date_range else 85,  # Provide default for function signature
+            output_candles=output_candles,  # Pass actual value in lookback mode, ignored in date_range mode
             tf=tf,
             asset=asset,
         )
@@ -151,9 +151,9 @@ def visualize_chart(request):
             from_date_str = request.POST.get('from_date', None)
             to_date_str = request.POST.get('to_date', None)
             
-            # FIX #2: Only use output_candles when NOT in date_range mode
+            # FIX: Only use output_candles when NOT in date_range mode
             if date_range:
-                output_candles = None  # Will be ignored
+                output_candles = 9999  # Large fallback value (will be ignored by get_and_clean_data)
             else:
                 output_candles = int(request.POST.get('output_candles', 85))
             
@@ -166,7 +166,7 @@ def visualize_chart(request):
                     from_date_str=from_date_str,
                     to_date_str=to_date_str,
                     ohlc_tz_str=ohlc_tz,
-                    output_candles=output_candles if not date_range else 85,  # Provide default
+                    output_candles=output_candles,  # Pass actual value in lookback mode, ignored in date_range mode
                     tf=tf,
                     asset=asset,
                 )

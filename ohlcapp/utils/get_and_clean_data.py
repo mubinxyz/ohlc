@@ -3,10 +3,8 @@
 import re
 from datetime import timezone, timedelta, datetime
 import pandas as pd
-# import numpy as np
 import time
 from .get_data import get_ohlc
-
 
 
 def get_and_clean_data(
@@ -17,7 +15,6 @@ def get_and_clean_data(
         output_candles: int=85,
         tf: int=15,
         asset: str='eurusd',
-
 ):
     """Fetch and clean OHLC data from configured source."""
 
@@ -90,16 +87,17 @@ def get_and_clean_data(
 
         return sign * hours, sign * minutes
 
-
-    # Determine date range
-    if date_range and from_date_str:
-        # Use specified date range
+    # Determine if we're using date range mode or lookback mode
+    use_date_range = date_range and from_date_str and from_date_str.strip()
+    
+    if use_date_range:
+        # DATE RANGE MODE: use specified dates, ignore output_candles completely
         from_date = _parse_date_to_unix(
             date_str=from_date_str, 
             timezone_str=ohlc_tz_str,
         )
 
-        if to_date_str:
+        if to_date_str and to_date_str.strip():
             to_date = _parse_date_to_unix(
                 date_str=to_date_str,
                 timezone_str=ohlc_tz_str,
@@ -108,18 +106,28 @@ def get_and_clean_data(
             # Default to current time if to_date not specified
             to_date = int(time.time())
 
-        print(f"[get_and_clean_data] Using date range mode:")
-        print(f"  From: {from_date_str} (Unix: {from_date})")
-        print(f"  To: {to_date_str if to_date_str else 'now'} (Unix: {to_date})")
+        duration_minutes = (to_date - from_date) / 60
+        estimated_candles = int(duration_minutes / tf)
+        
+        print(f"[get_and_clean_data] ✓ DATE RANGE MODE ACTIVE")
+        print(f"  From: {from_date_str} → Unix: {from_date}")
+        print(f"  To: {to_date_str if to_date_str else 'now'} → Unix: {to_date}")
+        print(f"  Duration: {duration_minutes:.0f} minutes ({duration_minutes/60:.1f} hours)")
+        print(f"  Estimated candles @ {tf}min: {estimated_candles}")
 
     else:
-        # Use output_candles to calculate lookback
+        # LOOKBACK MODE: use output_candles to calculate time range
+        # This happens when:
+        # - date_range=False, OR
+        # - date_range=True but from_date_str is empty/None
         lookback_seconds = output_candles * tf * 60
         from_date = int(time.time()) - int(lookback_seconds)
         to_date = int(time.time())
 
-        print(f"[get_and_clean_data] Using lookback mode:")
-        print(f"  Last {output_candles} candles")
+        print(f"[get_and_clean_data] ✓ LOOKBACK MODE ACTIVE")
+        print(f"  Requested: {output_candles} candles")
+        print(f"  Timeframe: {tf} minutes")
+        print(f"  Lookback: {lookback_seconds/60:.0f} minutes ({lookback_seconds/3600:.1f} hours)")
 
     resample_map = {
         "1": "1min",
@@ -150,12 +158,19 @@ def get_and_clean_data(
     else:
         fetch_tf = tf  
 
+    # FIX: get_ohlc already handles chunking automatically for >10k candles
+    print(f"[get_and_clean_data] Fetching data: from={from_date}, to={to_date}, tf={fetch_tf}")
+    
     asset_df_raw = get_ohlc(
         symbol=asset,
         timeframe=fetch_tf,
         from_date=from_date,
         to_date=to_date,
     )
+
+    if asset_df_raw.empty:
+        print("[get_and_clean_data] WARNING: No data returned from API")
+        return pd.DataFrame()
 
     asset_df_raw = asset_df_raw.dropna()
 
@@ -204,5 +219,4 @@ def get_and_clean_data(
     if not df.empty:
         print(f"  Date range: {df.index[0]} to {df.index[-1]}")
     
-    # CRITICAL: Return the dataframe!
     return df

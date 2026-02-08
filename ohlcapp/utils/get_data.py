@@ -33,16 +33,22 @@ def get_ohlc(symbol: str, timeframe: int = 15, from_date: int = None, to_date: i
     # API limit
     MAX_CANDLES_PER_REQUEST = 10000
 
+    print(f"[get_ohlc] Symbol: {norm_symbol}, TF: {timeframe}min, Estimated candles: {estimated_candles}")
+
     # If estimated candles <= 10000, make single request
     if estimated_candles <= MAX_CANDLES_PER_REQUEST:
+        print(f"[get_ohlc] Using single request (≤{MAX_CANDLES_PER_REQUEST} candles)")
         return _fetch_single_ohlc(norm_symbol, norm_timeframe, from_date, to_date)
 
     # Otherwise, split into multiple requests
-    print(f"[get_ohlc] Estimated {estimated_candles} candles needed. Splitting into multiple requests...")
+    print(f"[get_ohlc] Estimated {estimated_candles} candles (>{MAX_CANDLES_PER_REQUEST})")
+    print(f"[get_ohlc] Splitting into multiple chunk requests...")
 
     # Calculate number of chunks needed
     num_chunks = (estimated_candles + MAX_CANDLES_PER_REQUEST - 1) // MAX_CANDLES_PER_REQUEST
     chunk_duration = MAX_CANDLES_PER_REQUEST * timeframe_seconds
+
+    print(f"[get_ohlc] Will fetch {num_chunks} chunks of ~{MAX_CANDLES_PER_REQUEST} candles each")
 
     all_dfs = []
     current_from = from_date
@@ -51,15 +57,23 @@ def get_ohlc(symbol: str, timeframe: int = 15, from_date: int = None, to_date: i
         # Calculate end time for this chunk
         current_to = min(current_from + chunk_duration, to_date)
 
-        print(f"[get_ohlc] Fetching chunk {chunk_idx + 1}/{num_chunks} "
-              f"(from {current_from} to {current_to})...")
+        print(f"[get_ohlc] Chunk {chunk_idx + 1}/{num_chunks}: "
+              f"from {current_from} to {current_to} "
+              f"(~{(current_to - current_from) // timeframe_seconds} candles)")
 
         # Fetch chunk
-        chunk_df = _fetch_single_ohlc(norm_symbol, norm_timeframe, current_from, current_to)
+        try:
+            chunk_df = _fetch_single_ohlc(norm_symbol, norm_timeframe, current_from, current_to)
 
-        if not chunk_df.empty:
-            all_dfs.append(chunk_df)
-            print(f"[get_ohlc] Chunk {chunk_idx + 1} added: {len(chunk_df)} candles")
+            if not chunk_df.empty:
+                all_dfs.append(chunk_df)
+                print(f"[get_ohlc] ✓ Chunk {chunk_idx + 1} fetched: {len(chunk_df)} candles")
+            else:
+                print(f"[get_ohlc] ⚠ Chunk {chunk_idx + 1} returned no data (may be weekend/holiday)")
+
+        except Exception as e:
+            print(f"[get_ohlc] ✗ Chunk {chunk_idx + 1} failed: {e}")
+            # Continue with remaining chunks even if one fails
 
         # Move to next chunk (add 1 second to avoid overlap)
         current_from = current_to + 1
@@ -70,15 +84,15 @@ def get_ohlc(symbol: str, timeframe: int = 15, from_date: int = None, to_date: i
 
         # Small delay to avoid rate limiting
         if chunk_idx < num_chunks - 1:
-            time.sleep(0.2)
+            time.sleep(0.3)  # Slightly longer delay for safety
 
     # Merge all chunks
     if not all_dfs:
-        print("[get_ohlc] No data fetched from any chunk.")
+        print("[get_ohlc] ✗ No data fetched from any chunk.")
         return pd.DataFrame()
 
     print(f"[get_ohlc] Merging {len(all_dfs)} chunks...")
-    print(f"[get_ohlc] Chunks sizes: {[len(df) for df in all_dfs]}")
+    print(f"[get_ohlc] Chunk sizes: {[len(df) for df in all_dfs]}")
 
     # Concatenate all dataframes
     merged_df = pd.concat(all_dfs, ignore_index=False)
@@ -101,7 +115,12 @@ def get_ohlc(symbol: str, timeframe: int = 15, from_date: int = None, to_date: i
     # Sort by datetime
     merged_df = merged_df.sort_index()
 
-    print(f"[get_ohlc] Successfully fetched {len(merged_df)} unique candles total.")
+    print(f"[get_ohlc] ✓ Successfully fetched {len(merged_df)} unique candles total.")
+    
+    # Show actual vs estimated
+    if estimated_candles > 0:
+        coverage = (len(merged_df) / estimated_candles) * 100
+        print(f"[get_ohlc] Coverage: {coverage:.1f}% ({len(merged_df)}/{estimated_candles} estimated)")
 
     return merged_df
 
@@ -126,23 +145,30 @@ def _fetch_single_ohlc(norm_symbol: str, norm_timeframe: int, from_date: int, to
         )   
 
         resp = requests.get(lite_finance_url, timeout=300)
-        print(f"[_fetch_single_ohlc] URL: {lite_finance_url}")
-        print(f"[_fetch_single_ohlc] Status: {resp.status_code}")
-
+        
+        # Log URL only in verbose mode (first chunk or errors)
+        # print(f"[_fetch_single_ohlc] URL: {lite_finance_url}")
+        
         resp.raise_for_status()
         data = resp.json()
         ohlc_data = data.get("data", {})
 
         if ohlc_data:
             df = normalize_ohlc(ohlc_data)
-            print(f"[_fetch_single_ohlc] Fetched {len(df)} candles from API")
+            # print(f"[_fetch_single_ohlc] Fetched {len(df)} candles from API")
             return df
         else:
             print("[_fetch_single_ohlc] No data returned from API.")
             return pd.DataFrame()
 
+    except requests.exceptions.Timeout:
+        print(f"[_fetch_single_ohlc] Timeout error (300s exceeded)")
+        return pd.DataFrame()
+    except requests.exceptions.RequestException as e:
+        print(f"[_fetch_single_ohlc] Request error: {e}")
+        return pd.DataFrame()
     except Exception as e:
-        print(f"[_fetch_single_ohlc] OHLC error for {norm_symbol}: {e}")
+        print(f"[_fetch_single_ohlc] Error for {norm_symbol}: {e}")
         return pd.DataFrame()
 
 
